@@ -1,21 +1,67 @@
 package se.umu.sifl0010.googlemapsapplication
 
-// … [other imports remain the same]
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
+import android.net.Uri
+import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
+import android.widget.Button
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import se.umu.sifl0010.googlemapsapplication.adapter.PlacesListAdapter
+import se.umu.sifl0010.googlemapsapplication.model.Place
 import se.umu.googlemapsapplication.R
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+import androidx.core.app.ActivityCompat
 
 class PlacesListActivity : AppCompatActivity(), PlacesListAdapter.OnItemClickListener {
 
-    // … [other member variables remain the same]
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var adapter: PlacesListAdapter
+    private lateinit var tvPlaceholder: TextView
+    private lateinit var fabBack: FloatingActionButton
+    private val placesList = mutableListOf<Place>()
 
-    // Instead of a hardcoded API key, get it from resources.
-    private val apiKey: String
+    // User location and query parameters.
+    private var userLat: Double = 0.0
+    private var userLng: Double = 0.0
+    private var searchRadius: Int = 10000
+    private var queryType: String = "restaurant"
+
+    // API key.
+    private val API_KEY: String
         get() = getString(R.string.google_maps_key)
+
+    // FusedLocationProviderClient in case location extras are missing.
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_places_list)
 
-        // Setup Toolbar.
+        // Set up the Toolbar.
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
@@ -31,7 +77,7 @@ class PlacesListActivity : AppCompatActivity(), PlacesListAdapter.OnItemClickLis
         adapter = PlacesListAdapter(placesList, this)
         recyclerView.adapter = adapter
 
-        // Setup FloatingActionButton for back.
+        // Setup FloatingActionButton for back action.
         fabBack = findViewById(R.id.fabBack)
         fabBack.setOnClickListener { finish() }
 
@@ -45,10 +91,9 @@ class PlacesListActivity : AppCompatActivity(), PlacesListAdapter.OnItemClickLis
         // Initialize fusedLocationClient.
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        // If location extras are not provided, fetch the last known location.
         if (userLat == 0.0 && userLng == 0.0) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return
             }
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
@@ -79,7 +124,7 @@ class PlacesListActivity : AppCompatActivity(), PlacesListAdapter.OnItemClickLis
             }
         }
 
-        // Setup sidebar buttons from the drawer.
+        // Setup sidebar buttons.
         val btnSearch = drawerLayout.findViewById<Button>(R.id.btnSearch)
         val btnClearFilters = drawerLayout.findViewById<Button>(R.id.btnClearFilters)
         val btnBackDrawer = drawerLayout.findViewById<Button>(R.id.btnBackDrawer)
@@ -117,13 +162,16 @@ class PlacesListActivity : AppCompatActivity(), PlacesListAdapter.OnItemClickLis
         }
     }
 
+    /**
+     * Queries the Google Places Nearby Search API asynchronously.
+     */
     private fun queryNearbyPlaces() {
         if (userLat == 0.0 && userLng == 0.0) {
             Toast.makeText(this, "User location not available", Toast.LENGTH_SHORT).show()
             return
         }
         val locationStr = "$userLat,$userLng"
-        val urlStr = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$locationStr&radius=$searchRadius&type=$queryType&key=$apiKey"
+        val urlStr = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$locationStr&radius=$searchRadius&type=$queryType&key=$API_KEY"
 
         GlobalScope.launch(Dispatchers.IO) {
             try {
