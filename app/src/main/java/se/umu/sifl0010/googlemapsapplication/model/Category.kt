@@ -1,10 +1,10 @@
 package se.umu.sifl0010.googlemapsapplication.model
 
 /**
- * Data model for a category.
- * Each category has a name and a list of subcategories.
+ * Recursive data model for a category.
  */
 data class Category(
     val name: String,
-    val subcategories: List<String>
+    val subcategories: List<Category> = emptyList(),
+    var isSelected: Boolean = false
 )
