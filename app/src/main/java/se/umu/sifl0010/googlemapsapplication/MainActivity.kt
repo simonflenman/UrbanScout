@@ -62,8 +62,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Request code for location permission.
     private val LOCATION_PERMISSION_REQUEST = 1
 
-    // API key.
-    private val API_KEY = "AIzaSyD8-9Y9KTqL8fTOl6F1JDyGc6yulBZ1k_U"
+    // Instead of a hardcoded API key, retrieve it from resources.
+    private val apiKey: String
+        get() = getString(R.string.google_maps_key)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -187,7 +188,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun queryNearbyPlacesForMap() {
         if (currentLocation == null) return
         val locationStr = "${currentLocation!!.latitude},${currentLocation!!.longitude}"
-        val urlStr = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$locationStr&radius=$searchRadius&type=$queryType&key=$API_KEY"
+        val urlStr = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$locationStr&radius=$searchRadius&type=$queryType&key=$apiKey"
 
         GlobalScope.launch(Dispatchers.IO) {
             try {
@@ -252,9 +253,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == LOCATION_PERMISSION_REQUEST && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED
-            ) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 mMap.isMyLocationEnabled = true
                 getLastKnownLocation()
             }

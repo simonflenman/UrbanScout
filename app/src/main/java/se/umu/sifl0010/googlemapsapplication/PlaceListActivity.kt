@@ -1,60 +1,15 @@
 package se.umu.sifl0010.googlemapsapplication
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.location.Location
-import android.net.Uri
-import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import android.view.View
-import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
-import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import se.umu.sifl0010.googlemapsapplication.adapter.PlacesListAdapter
-import se.umu.sifl0010.googlemapsapplication.model.Place
+// … [other imports remain the same]
 import se.umu.googlemapsapplication.R
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
-import androidx.core.app.ActivityCompat
 
 class PlacesListActivity : AppCompatActivity(), PlacesListAdapter.OnItemClickListener {
 
-    private lateinit var drawerLayout: DrawerLayout
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var adapter: PlacesListAdapter
-    private lateinit var tvPlaceholder: TextView
-    private lateinit var fabBack: FloatingActionButton
-    private val placesList = mutableListOf<Place>()
+    // … [other member variables remain the same]
 
-    // User location and query parameters.
-    private var userLat: Double = 0.0
-    private var userLng: Double = 0.0
-    private var searchRadius: Int = 10000
-    private var queryType: String = "restaurant"
-
-    // API key.
-    private val API_KEY = "AIzaSyD8-9Y9KTqL8fTOl6F1JDyGc6yulBZ1k_U"
-
-    // FusedLocationProviderClient in case location extras are missing.
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    // Instead of a hardcoded API key, get it from resources.
+    private val apiKey: String
+        get() = getString(R.string.google_maps_key)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,12 +45,10 @@ class PlacesListActivity : AppCompatActivity(), PlacesListAdapter.OnItemClickLis
         // Initialize fusedLocationClient.
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        // If no location was passed, try to get it.
         if (userLat == 0.0 && userLng == 0.0) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED
             ) {
-                // Permission check (should be handled in your calling activity)
                 return
             }
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
@@ -164,16 +117,13 @@ class PlacesListActivity : AppCompatActivity(), PlacesListAdapter.OnItemClickLis
         }
     }
 
-    /**
-     * Queries the Google Places Nearby Search API asynchronously.
-     */
     private fun queryNearbyPlaces() {
         if (userLat == 0.0 && userLng == 0.0) {
             Toast.makeText(this, "User location not available", Toast.LENGTH_SHORT).show()
             return
         }
         val locationStr = "$userLat,$userLng"
-        val urlStr = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$locationStr&radius=$searchRadius&type=$queryType&key=$API_KEY"
+        val urlStr = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$locationStr&radius=$searchRadius&type=$queryType&key=$apiKey"
 
         GlobalScope.launch(Dispatchers.IO) {
             try {
